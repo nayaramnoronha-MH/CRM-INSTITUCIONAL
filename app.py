@@ -541,7 +541,7 @@ if result[0] is not None:
     df, col_map, original_cols, worksheet = result
     
     # Prepare header / branding
-    st.markdown("<h1 style='color: #FF6B00; margin-bottom: 2px;'>🍊 Marinas por SP</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='color: #FF6B00; margin-bottom: 2px;'>🍊 CRM Institucional da Campanha 2026</h1>", unsafe_allow_html=True)
     st.markdown("<h3 style='color: #E6007E; font-weight: 500; margin-top: 0px;'>Central de Controle Digital do Time</h3>", unsafe_allow_html=True)
     st.divider()
 
@@ -559,9 +559,22 @@ if result[0] is not None:
         placeholder="Todos os responsáveis"
     )
     
-    my_name = st.sidebar.selectbox("Filtro Rápido (Definir responsável):", options=["Sem Seleção"] + list(OPERATORS.keys()))
-    if my_name != "Sem Seleção":
-        op_filter = [my_name]
+    # Cardápio de Apoio filter
+    SUPPORT_FILTER_MAP = {
+        "Agenda/Roda temática": "agenda_roda",
+        "Distribuição de Kits de materiais": "kit_materiais",
+        "Gravação de vídeo em redes sociais": "video_instagram",
+        "Conteúdo no WhatsApp": "grupo_whatsapp",
+        "Newsletter da instituição/região": "newsletter",
+        "Apoio PF": "apoio_pf"
+    }
+    
+    selected_supports = st.sidebar.multiselect(
+        "Cardápio de Apoio",
+        options=list(SUPPORT_FILTER_MAP.keys()),
+        default=None,
+        placeholder="Filtrar por apoios..."
+    )
 
     # Municipalities and regions filter
     muni_col = col_map.get('municipio')
@@ -612,6 +625,16 @@ if result[0] is not None:
         
     if status_filter and status_col:
         filtered_df = filtered_df[filtered_df[status_col].isin(status_filter)]
+        
+    if selected_supports:
+        for support_name in selected_supports:
+            key = SUPPORT_FILTER_MAP[support_name]
+            col_name = col_map.get(key)
+            if col_name and col_name in filtered_df.columns:
+                if key == 'agenda_roda':
+                    filtered_df = filtered_df[filtered_df[col_name].apply(parse_agenda_count) > 0]
+                else:
+                    filtered_df = filtered_df[filtered_df[col_name] == True]
         
     if search_query.strip():
         q = search_query.strip().lower()
