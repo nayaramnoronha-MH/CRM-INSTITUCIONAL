@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# CRM project backups and local caches
+backups/
+city_coords_cache.json
+
+# MS Excel temporary lock files
+~$*.xlsx
+
+# Secrets/Credentials do Streamlit (GCP Key Security)
+.streamlit/secrets.toml
