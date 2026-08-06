@@ -401,7 +401,8 @@ def load_data_from_sheets():
             'doacao_financeira': ['doação financeira', 'doacao'],
             'data_ultimo_contato': ['data do último contato', 'ultimo contato'],
             'data_roda_conversa': ['data da roda'],
-            'instagram': ['instagram']
+            'instagram': ['instagram'],
+            'origem': ['origem da instituição', 'origem da instituicao', 'origem']
         }
         
         col_map = {}
@@ -927,6 +928,9 @@ if result[0] is not None:
                         new_pauta = st.text_input("Pauta", value=str(record[col_map['pauta']]) if not pd.isna(record[col_map['pauta']]) else "")
                         new_instagram = st.text_input("Instagram", value=str(record[col_map['instagram']]) if not pd.isna(record[col_map['instagram']]) else "")
                         
+                        orig_col = col_map.get('origem')
+                        new_origem = st.text_input("Origem da Instituição", value=str(record[orig_col]) if orig_col and not pd.isna(record[orig_col]) else "")
+                        
                         st.divider()
                         st.subheader("Filtros e Responsável")
                         
@@ -1010,6 +1014,9 @@ if result[0] is not None:
                                 'newsletter': chk_newsletter,
                                 'apoio_pf': chk_pf
                             }
+                            
+                            if col_map.get('origem'):
+                                updates['origem'] = new_origem
                             
                             if append_log and new_log_text.strip() != "":
                                 today_str = datetime.date.today().strftime("%d/%m/%y")
@@ -1195,6 +1202,7 @@ if result[0] is not None:
             new_rep_phone = st.text_input("Telefone de Contato", placeholder="Ex: 11987071760")
             new_muni = st.text_input("Município", placeholder="Ex: Campinas")
             new_pauta = st.text_input("Pauta de Interesse", placeholder="Ex: Meio Ambiente")
+            new_origem = st.text_input("Origem da Instituição", placeholder="Ex: Evento Municipal")
             
             new_resp_name = st.selectbox(
                 "Responsável Atribuído", 
@@ -1226,6 +1234,8 @@ if result[0] is not None:
                         'newsletter': False,
                         'apoio_pf': False
                     }
+                    if col_map.get('origem'):
+                        new_record['origem'] = new_origem.strip()
                     
                     try:
                         append_google_sheet_row(worksheet, new_record, col_map, original_cols)
