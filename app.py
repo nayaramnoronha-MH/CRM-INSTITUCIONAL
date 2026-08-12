@@ -480,59 +480,93 @@ def update_google_sheet_row(worksheet, row_idx, updates, col_map, original_cols)
     from gspread.cell import Cell
     
     excel_row = int(row_idx) + 2
-    headers = original_cols
     
+    try:
+        headers = [str(val).strip() for val in worksheet.row_values(1)]
+    except Exception as e:
+        headers = [str(col).strip() for col in original_cols]
+        
     cells_to_update = []
+    max_cols = len(headers)
     
     for key, val in updates.items():
         col_name = col_map.get(key)
-        if col_name and col_name in headers:
-            col_idx = headers.index(col_name) + 1
-            
-            # format value
-            formatted_val = ""
-            if key == 'agenda_roda':
-                formatted_val = str(val)
-            elif key in ['kit_materiais', 'video_instagram', 'grupo_whatsapp', 'newsletter', 'apoio_pf', 'doacao_financeira']:
-                formatted_val = "sim" if val else "não"
-            elif key in ['data_ultimo_contato', 'data_roda_conversa']:
-                if val is None or pd.isna(val):
-                    formatted_val = ""
-                else:
-                    if isinstance(val, (datetime.datetime, datetime.date)):
-                        formatted_val = val.strftime('%d/%m/%Y')
-                    else:
-                        try:
-                            formatted_val = pd.to_datetime(val).strftime('%d/%m/%Y')
-                        except:
-                            formatted_val = str(val)
-            else:
-                formatted_val = "" if pd.isna(val) else str(val)
+        if col_name:
+            col_name_strip = col_name.strip()
+            if col_name_strip in headers:
+                col_idx = headers.index(col_name_strip) + 1
                 
-            cells_to_update.append(Cell(row=excel_row, col=col_idx, value=formatted_val))
-            
+                # Safety check: ensure column index is within header range
+                if col_idx < 1 or col_idx > max_cols:
+                    continue
+                    
+                # format value
+                formatted_val = ""
+                if key == 'agenda_roda':
+                    formatted_val = str(val)
+                elif key in ['kit_materiais', 'video_instagram', 'grupo_whatsapp', 'newsletter', 'apoio_pf', 'doacao_financeira']:
+                    formatted_val = "sim" if parse_bool(val) else "não"
+                elif key in ['data_ultimo_contato', 'data_roda_conversa']:
+                    if val is None or pd.isna(val):
+                        formatted_val = ""
+                    else:
+                        if isinstance(val, (datetime.datetime, datetime.date)):
+                            formatted_val = val.strftime('%d/%m/%Y')
+                        else:
+                            try:
+                                formatted_val = pd.to_datetime(val).strftime('%d/%m/%Y')
+                            except:
+                                formatted_val = str(val)
+                else:
+                    formatted_val = "" if (pd.isna(val) or val is None) else str(val)
+                    
+                cells_to_update.append(Cell(row=excel_row, col=col_idx, value=formatted_val))
+                
     if cells_to_update:
-        worksheet.update_cells(cells_to_update)
-        st.cache_data.clear()
+        try:
+            worksheet.update_cells(cells_to_update)
+            st.cache_data.clear()
+        except Exception as e:
+            raise Exception(f"Erro ao salvar alterações no Google Sheets: {e}")
 
 # Add a brand new record to the Google Sheet
 def append_google_sheet_row(worksheet, new_record, col_map, original_cols):
-    headers = original_cols
+    try:
+        headers = [str(val).strip() for val in worksheet.row_values(1)]
+    except Exception as e:
+        headers = [str(col).strip() for col in original_cols]
+        
     row_values = [""] * len(headers)
     
     for key, val in new_record.items():
         col_name = col_map.get(key)
-        if col_name and col_name in headers:
-            col_idx = headers.index(col_name)
-            
-            if key == 'agenda_roda':
-                row_values[col_idx] = str(val)
-            elif key in ['kit_materiais', 'video_instagram', 'grupo_whatsapp', 'newsletter', 'apoio_pf']:
-                row_values[col_idx] = "sim" if val else "não"
-            else:
-                row_values[col_idx] = "" if pd.isna(val) else str(val)
+        if col_name:
+            col_name_strip = col_name.strip()
+            if col_name_strip in headers:
+                col_idx = headers.index(col_name_strip)
                 
-    worksheet.append_row(row_values)
+                if key == 'agenda_roda':
+                    row_values[col_idx] = str(val)
+                elif key in ['kit_materiais', 'video_instagram', 'grupo_whatsapp', 'newsletter', 'apoio_pf', 'doacao_financeira']:
+                    row_values[col_idx] = "sim" if parse_bool(val) else "não"
+                else:
+                    row_values[col_idx] = "" if (pd.isna(val) or val is None) else str(val)
+                    
+    # Find the last row containing actual data (ignoring empty lines with formatting)
+    try:
+        all_values = worksheet.get_all_values()
+        last_row = 1
+        for idx, row in enumerate(all_values):
+            if any(cell.strip() for cell in row):
+                last_row = idx + 1
+        next_row = last_row + 1
+        
+        # Write to the first truly empty row (next_row) using A1 notation
+        worksheet.update(f"A{next_row}", [row_values])
+    except Exception as e:
+        # Fallback to standard append_row if there is any issue with get_all_values or update
+        worksheet.append_row(row_values)
+        
     st.cache_data.clear()
 
 # Load dataset from Google Sheets
