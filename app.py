@@ -1229,13 +1229,28 @@ if result[0] is not None:
     with tab_cadastro:
         st.subheader("➕ Formulário de Cadastro de Nova Entidade/Liderança")
         
+        # Extract unique statuses and pautas dynamically
+        status_col = col_map.get('status')
+        status_options_unique = []
+        if status_col and status_col in df.columns:
+            status_options_unique = sorted(list(set(str(x).strip() for x in df[status_col].dropna().unique() if str(x).strip())))
+        status_select_options = [""] + status_options_unique
+        
+        pauta_col = col_map.get('pauta')
+        pauta_options_unique = []
+        if pauta_col and pauta_col in df.columns:
+            pauta_options_unique = sorted(list(set(str(x).strip() for x in df[pauta_col].dropna().unique() if str(x).strip())))
+        pauta_select_options = [""] + pauta_options_unique
+        
         with st.form("nova_instituicao_form_v3"):
             st.info("Preencha os dados para registrar um novo contato no CRM.")
             new_inst_name = st.text_input("Nome da Instituição", placeholder="Ex: Associação de Bairro")
             new_rep_name = st.text_input("Nome do Representante", placeholder="Ex: João da Silva")
             new_rep_phone = st.text_input("Telefone de Contato", placeholder="Ex: 11987071760")
             new_muni = st.text_input("Município", placeholder="Ex: Campinas")
-            new_pauta = st.text_input("Pauta de Interesse", placeholder="Ex: Meio Ambiente")
+            
+            new_pauta_select = st.selectbox("Pauta de Interesse (Opcional)", options=pauta_select_options, index=0)
+            new_status_select = st.selectbox("Status da Instituição (Opcional)", options=status_select_options, index=0)
             new_origem = st.text_input("Origem da Instituição", placeholder="Ex: Evento Municipal")
             
             new_resp_name = st.selectbox(
@@ -1257,9 +1272,9 @@ if result[0] is not None:
                         'representante': new_rep_name.strip(),
                         'telefone': new_rep_phone.strip(),
                         'municipio': new_muni.strip(),
-                        'pauta': new_pauta.strip(),
+                        'pauta': new_pauta_select.strip() if new_pauta_select else "",
                         'responsavel': new_resp_name if new_resp_name != "Não atribuído" else None,
-                        'status': "Não contatado",
+                        'status': new_status_select.strip() if new_status_select else "",
                         'historico': new_historico.strip(),
                         'agenda_roda': "NÃO",
                         'kit_materiais': False,
