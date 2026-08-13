@@ -248,6 +248,19 @@ def parse_bool(val):
     val_str = str(val).strip().lower()
     return val_str in ['sim', 's', 'yes', 'y', 'true', '1', '1.0']
 
+# Cardápio Político/Apoio boolean parser (considers everything positive except "Não", empty, False, 0)
+def parse_cardapio_bool(val):
+    if pd.isna(val) or val is None:
+        return False
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, (int, float)):
+        return bool(val)
+    val_str = str(val).strip().lower()
+    if val_str in ['', 'não', 'nao', 'false', '0', '0.0']:
+        return False
+    return True
+
 # Helper to normalize responsible names
 def normalize_responsavel(name):
     if pd.isna(name):
@@ -293,22 +306,22 @@ def parse_agenda_count(val):
         return 1
     return 0
 
-# Count the number of supports closed in a single row
+# Count the number of supports closed in a single row (expanding to 11 columns)
 def get_row_apoios_count(row, col_map):
     count = 0
-    count += parse_agenda_count(row.get(col_map['agenda_roda']))
-    
-    if parse_bool(row.get(col_map['kit_materiais'])):
-        count += 1
-    if parse_bool(row.get(col_map['video_instagram'])):
-        count += 1
-    if parse_bool(row.get(col_map['grupo_whatsapp'])):
-        count += 1
-    if parse_bool(row.get(col_map['newsletter'])):
-        count += 1
-    if parse_bool(row.get(col_map['apoio_pf'])):
-        count += 1
+    if col_map.get('agenda_roda'):
+        count += parse_agenda_count(row.get(col_map['agenda_roda']))
         
+    cardapio_keys = [
+        'kit_materiais', 'video_instagram', 'grupo_whatsapp',
+        'grupo_marinas', 'newsletter', 'contribuir_pautas',
+        'perfuraid', 'apoio_pf', 'voluntario', 'doacao_financeira'
+    ]
+    for key in cardapio_keys:
+        col_name = col_map.get(key)
+        if col_name:
+            if parse_cardapio_bool(row.get(col_name)):
+                count += 1
     return count
 
 # Alerta de Tempo Sem Contato Calculator
@@ -377,7 +390,7 @@ def load_data_from_sheets():
         
         df = pd.DataFrame(data, columns=original_cols)
         
-        # Flex column mapping
+        # Flex column mapping (expanded for all 11 cardapio columns)
         standard_columns = {
             'instituicao': ['nome da institui', 'institui'],
             'representante': ['nome e sobrenome', 'representante', 'nome do contato'],
@@ -392,13 +405,17 @@ def load_data_from_sheets():
             'prioridade': ['prioridade'],
             'responsavel': ['responsável', 'responsavel'],
             'pauta': ['pauta'],
-            'agenda_roda': ['agenda / roda tem', 'agenda/roda tem', 'agenda / roda temática'],
+            'agenda_roda': ['agenda / roda tem', 'agenda/roda tem', 'agenda / roda temática', 'agenda / roda tematica'],
             'kit_materiais': ['kit de materiais', 'kits de materiais'],
-            'video_instagram': ['vídeo instagram', 'video instagram', 'gravação de vídeo'],
-            'grupo_whatsapp': ['grupo de whatsapp', 'grupo de zap', 'conteúdo no whatsapp'],
-            'newsletter': ['newsletter', 'newsletter da'],
+            'video_instagram': ['vídeo de instagram', 'video de instagram', 'vídeo instagram', 'video instagram'],
+            'grupo_whatsapp': ['envio de conteúdo em grupos de whatsapp', 'envio de conteudo em grupos de whatsapp', 'grupo de whatsapp', 'conteúdo no whatsapp'],
+            'grupo_marinas': ['entrar no grupo das marinas', 'grupo das marinas', 'grupo marinas'],
+            'newsletter': ['newsletter da instituição/região', 'newsletter da instituicao/regiao', 'newsletter'],
+            'contribuir_pautas': ['contribuir com pautas', 'contribuir pautas'],
+            'perfuraid': ['perfuraid - adesivo de carro', 'perfuraid', 'adesivo de carro'],
             'apoio_pf': ['apoio na pf', 'apoio pf'],
-            'doacao_financeira': ['doação financeira', 'doacao'],
+            'voluntario': ['voluntário', 'voluntario'],
+            'doacao_financeira': ['doação financeira', 'doacao', 'financeira'],
             'data_ultimo_contato': ['data do último contato', 'ultimo contato'],
             'data_roda_conversa': ['data da roda'],
             'instagram': ['instagram'],
@@ -419,7 +436,12 @@ def load_data_from_sheets():
             
         # Clean Types in DataFrame
         # Convert checklists to boolean
-        for key in ['kit_materiais', 'video_instagram', 'grupo_whatsapp', 'newsletter', 'apoio_pf', 'doacao_financeira']:
+        cardapio_keys = [
+            'kit_materiais', 'video_instagram', 'grupo_whatsapp',
+            'grupo_marinas', 'newsletter', 'contribuir_pautas',
+            'perfuraid', 'apoio_pf', 'voluntario', 'doacao_financeira'
+        ]
+        for key in cardapio_keys:
             col_name = col_map.get(key)
             if col_name and col_name in df.columns:
                 df[col_name] = df[col_name].apply(parse_bool)
@@ -594,14 +616,19 @@ if result[0] is not None:
         placeholder="Todos os responsáveis"
     )
     
-    # Cardápio de Apoio filter
+    # Cardápio de Apoio filter (expanded for all 11 columns)
     SUPPORT_FILTER_MAP = {
-        "Agenda/Roda temática": "agenda_roda",
-        "Distribuição de Kits de materiais": "kit_materiais",
-        "Gravação de vídeo em redes sociais": "video_instagram",
-        "Conteúdo no WhatsApp": "grupo_whatsapp",
+        "Agenda / Roda Temática": "agenda_roda",
+        "Kit de Materiais": "kit_materiais",
+        "Vídeo de instagram": "video_instagram",
+        "Envio de conteúdo em grupos de whatsapp": "grupo_whatsapp",
+        "ENTRAR NO GRUPO DAS MARINAS": "grupo_marinas",
         "Newsletter da instituição/região": "newsletter",
-        "Apoio PF": "apoio_pf"
+        "Contribuir com pautas": "contribuir_pautas",
+        "Perfuraid - adesivo de carro": "perfuraid",
+        "Apoio na PF": "apoio_pf",
+        "Voluntário": "voluntario",
+        "Doação Financeira": "doacao_financeira"
     }
     
     selected_supports = st.sidebar.multiselect(
@@ -669,7 +696,7 @@ if result[0] is not None:
                 if key == 'agenda_roda':
                     filtered_df = filtered_df[filtered_df[col_name].apply(parse_agenda_count) > 0]
                 else:
-                    filtered_df = filtered_df[filtered_df[col_name] == True]
+                    filtered_df = filtered_df[filtered_df[col_name].apply(parse_cardapio_bool) == True]
         
     if search_query.strip():
         q = search_query.strip().lower()
@@ -702,13 +729,18 @@ if result[0] is not None:
         target_crm = 1500
         progress_ratio = min(1.0, total_contatadas / target_crm)
         
-        # Checklists metrics
-        roda_conversa_count = df[col_map['agenda_roda']].apply(parse_agenda_count).sum()
-        kit_count = df[col_map['kit_materiais']].apply(parse_bool).sum() if col_map.get('kit_materiais') else 0
-        virtual_count = df[col_map['video_instagram']].apply(parse_bool).sum() if col_map.get('video_instagram') else 0
-        whatsapp_count = df[col_map['grupo_whatsapp']].apply(parse_bool).sum() if col_map.get('grupo_whatsapp') else 0
-        newsletter_count = df[col_map['newsletter']].apply(parse_bool).sum() if col_map.get('newsletter') else 0
-        pf_count = df[col_map['apoio_pf']].apply(parse_bool).sum() if col_map.get('apoio_pf') else 0
+        # Checklists metrics (recalculated for all 11 cardapio columns)
+        roda_conversa_count = df[col_map['agenda_roda']].apply(parse_agenda_count).sum() if col_map.get('agenda_roda') else 0
+        kit_count = df[col_map['kit_materiais']].apply(parse_cardapio_bool).sum() if col_map.get('kit_materiais') else 0
+        video_count = df[col_map['video_instagram']].apply(parse_cardapio_bool).sum() if col_map.get('video_instagram') else 0
+        whatsapp_count = df[col_map['grupo_whatsapp']].apply(parse_cardapio_bool).sum() if col_map.get('grupo_whatsapp') else 0
+        grupo_marinas_count = df[col_map['grupo_marinas']].apply(parse_cardapio_bool).sum() if col_map.get('grupo_marinas') else 0
+        newsletter_count = df[col_map['newsletter']].apply(parse_cardapio_bool).sum() if col_map.get('newsletter') else 0
+        pautas_count = df[col_map['contribuir_pautas']].apply(parse_cardapio_bool).sum() if col_map.get('contribuir_pautas') else 0
+        perfuraid_count = df[col_map['perfuraid']].apply(parse_cardapio_bool).sum() if col_map.get('perfuraid') else 0
+        pf_count = df[col_map['apoio_pf']].apply(parse_cardapio_bool).sum() if col_map.get('apoio_pf') else 0
+        voluntario_count = df[col_map['voluntario']].apply(parse_cardapio_bool).sum() if col_map.get('voluntario') else 0
+        doacao_count = df[col_map['doacao_financeira']].apply(parse_cardapio_bool).sum() if col_map.get('doacao_financeira') else 0
         
         col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
         with col_kpi1:
@@ -787,19 +819,66 @@ if result[0] is not None:
             st.bar_chart(chart_contacts, color="#E6007E")
         
         st.markdown("### 📊 Volumes do Cardápio Político (Histórico)")
-        funnel_cols = st.columns(6)
-        with funnel_cols[0]:
-            render_metric_card("Agendas", f"{int(roda_conversa_count)}", "#FF6B00")
-        with funnel_cols[1]:
-            render_metric_card("Kits de Materiais", f"{kit_count}", "#E6007E")
-        with funnel_cols[2]:
-            render_metric_card("Vídeos Redes", f"{virtual_count}", "#FF6B00")
-        with funnel_cols[3]:
-            render_metric_card("Conteúdo WhatsApp", f"{whatsapp_count}", "#E6007E")
-        with funnel_cols[4]:
-            render_metric_card("Newsletter", f"{newsletter_count}", "#FF6B00")
-        with funnel_cols[5]:
-            render_metric_card("Apoio PF", f"{pf_count}", "#E6007E")
+        
+        # Plotly horizontal bar chart for the 11 frentes (High-End UX)
+        frentes_labels = [
+            "Agendas/Rodas", "Kits de Materiais", "Vídeos Instagram", "Grupos WhatsApp",
+            "Grupo das Marinas", "Newsletter", "Contribuir Pautas", "Perfuraid (Adesivos)",
+            "Apoios PF", "Voluntários", "Doações Financeiras"
+        ]
+        frentes_volumes = [
+            int(roda_conversa_count), int(kit_count), int(video_count), int(whatsapp_count),
+            int(grupo_marinas_count), int(newsletter_count), int(pautas_count), int(perfuraid_count),
+            int(pf_count), int(voluntario_count), int(doacao_count)
+        ]
+        df_volumes = pd.DataFrame({
+            'Frente': frentes_labels,
+            'Volume': frentes_volumes
+        }).sort_values(by='Volume', ascending=True)
+        
+        fig_frentes = px.bar(
+            df_volumes,
+            x='Volume',
+            y='Frente',
+            orientation='h',
+            color='Volume',
+            color_continuous_scale=['#FF6B00', '#E6007E'],
+            text='Volume',
+            title='Volume Total por Frente do Cardápio de Apoio'
+        )
+        fig_frentes.update_layout(
+            height=400,
+            margin=dict(l=0, r=0, t=30, b=0),
+            coloraxis_showscale=False
+        )
+        st.plotly_chart(fig_frentes, use_container_width=True)
+        
+        st.markdown("#### Detalhamento das 11 Frentes")
+        row1_cols = st.columns(6)
+        with row1_cols[0]:
+            render_metric_card("Agendas/Rodas", f"{int(roda_conversa_count)}", "#FF6B00")
+        with row1_cols[1]:
+            render_metric_card("Kits Materiais", f"{kit_count}", "#E6007E")
+        with row1_cols[2]:
+            render_metric_card("Vídeos Insta", f"{video_count}", "#FF6B00")
+        with row1_cols[3]:
+            render_metric_card("Grupos Zap", f"{whatsapp_count}", "#E6007E")
+        with row1_cols[4]:
+            render_metric_card("Grupo Marinas", f"{grupo_marinas_count}", "#FF6B00")
+        with row1_cols[5]:
+            render_metric_card("Newsletters", f"{newsletter_count}", "#E6007E")
+            
+        row2_cols = st.columns(5)
+        with row2_cols[0]:
+            render_metric_card("Contribuir Pautas", f"{pautas_count}", "#FF6B00")
+        with row2_cols[1]:
+            render_metric_card("Perfuraid", f"{perfuraid_count}", "#E6007E")
+        with row2_cols[2]:
+            render_metric_card("Apoios PF", f"{pf_count}", "#FF6B00")
+        with row2_cols[3]:
+            render_metric_card("Voluntários", f"{voluntario_count}", "#E6007E")
+        with row2_cols[4]:
+            render_metric_card("Doações", f"{doacao_count}", "#FF6B00")
 
         # WhatsApp Summary Generator (read-only trigger)
         st.divider()
@@ -820,20 +899,26 @@ if result[0] is not None:
             
             contatos_semana = len(op_df_week)
             
-            agendas_sem = op_df_week[col_map['agenda_roda']].apply(parse_agenda_count).sum()
-            kits_sem = op_df_week[col_map['kit_materiais']].apply(parse_bool).sum() if col_map.get('kit_materiais') else 0
-            videos_sem = op_df_week[col_map['video_instagram']].apply(parse_bool).sum() if col_map.get('video_instagram') else 0
-            wa_sem = op_df_week[col_map['grupo_whatsapp']].apply(parse_bool).sum() if col_map.get('grupo_whatsapp') else 0
-            news_sem = op_df_week[col_map['newsletter']].apply(parse_bool).sum() if col_map.get('newsletter') else 0
-            pf_sem = op_df_week[col_map['apoio_pf']].apply(parse_bool).sum() if col_map.get('apoio_pf') else 0
+            agendas_sem = op_df_week[col_map['agenda_roda']].apply(parse_agenda_count).sum() if col_map.get('agenda_roda') else 0
+            kits_sem = op_df_week[col_map['kit_materiais']].apply(parse_cardapio_bool).sum() if col_map.get('kit_materiais') else 0
+            videos_sem = op_df_week[col_map['video_instagram']].apply(parse_cardapio_bool).sum() if col_map.get('video_instagram') else 0
+            wa_sem = op_df_week[col_map['grupo_whatsapp']].apply(parse_cardapio_bool).sum() if col_map.get('grupo_whatsapp') else 0
+            marinas_sem = op_df_week[col_map['grupo_marinas']].apply(parse_cardapio_bool).sum() if col_map.get('grupo_marinas') else 0
+            news_sem = op_df_week[col_map['newsletter']].apply(parse_cardapio_bool).sum() if col_map.get('newsletter') else 0
+            pautas_sem = op_df_week[col_map['contribuir_pautas']].apply(parse_cardapio_bool).sum() if col_map.get('contribuir_pautas') else 0
+            perfuraid_sem = op_df_week[col_map['perfuraid']].apply(parse_cardapio_bool).sum() if col_map.get('perfuraid') else 0
+            pf_sem = op_df_week[col_map['apoio_pf']].apply(parse_cardapio_bool).sum() if col_map.get('apoio_pf') else 0
+            voluntario_sem = op_df_week[col_map['voluntario']].apply(parse_cardapio_bool).sum() if col_map.get('voluntario') else 0
+            doacao_sem = op_df_week[col_map['doacao_financeira']].apply(parse_cardapio_bool).sum() if col_map.get('doacao_financeira') else 0
             
-            apoios_sem_sum = agendas_sem + kits_sem + videos_sem + wa_sem + news_sem + pf_sem
+            apoios_sem_sum = (agendas_sem + kits_sem + videos_sem + wa_sem + marinas_sem + 
+                              news_sem + pautas_sem + perfuraid_sem + pf_sem + voluntario_sem + doacao_sem)
             
             total_op_mapeadas = len(op_df)
             total_op_contatadas = is_contacted_series[op_mask].sum()
             total_op_apoios = sum(get_row_apoios_count(row, col_map) for _, row in op_df.iterrows())
             
-            summary_text = f"""*🍊 Relatório Semanal - Mandato (Marinas por SP)*
+            summary_text = f"""*🍊 Relatório Semanal - CRM Campanha 2026*
 *Responsável:* {selected_wa_op}
 *Período:* {start_of_week.strftime('%d/%m/%Y')} a {end_of_week.strftime('%d/%m/%Y')}
 
@@ -843,11 +928,16 @@ if result[0] is not None:
 
 *📋 Detalhamento dos Apoios da Semana:*
 - Agendas/Rodas temáticas: {int(agendas_sem)}
-- Distribuição de Kits: {kits_sem}
+- Kits de Materiais: {kits_sem}
 - Gravação de Vídeos: {videos_sem}
 - Grupos de WhatsApp: {wa_sem}
+- Entrar no grupo das Marinas: {marinas_sem}
 - Newsletters da região: {news_sem}
+- Contribuir com pautas: {pautas_sem}
+- Perfuraid (Adesivos): {perfuraid_sem}
 - Apoios PF: {pf_sem}
+- Voluntários: {voluntario_sem}
+- Doações: {doacao_sem}
 
 *📊 Produção Histórica:*
 - Total de Instituições Mapeadas: {total_op_mapeadas}
@@ -1019,13 +1109,18 @@ if result[0] is not None:
                             elif idx == 0 and curr_agenda_val.upper() in ['FALSE', '0', '0.0']:
                                 agenda_default_idx = 0
                                 
-                        new_agenda_val = st.selectbox("1. Agenda / Roda temática (AC)", options=agenda_options, index=agenda_default_idx)
+                        new_agenda_val = st.selectbox("1. Agenda / Roda Temática (AC)", options=agenda_options, index=agenda_default_idx)
                         
-                        chk_kit = st.checkbox("2. Distribuição de Kits de materiais", value=parse_bool(record[col_map['kit_materiais']]))
-                        chk_video = st.checkbox("3. Gravação de vídeo em redes sociais", value=parse_bool(record[col_map['video_instagram']]))
-                        chk_whatsapp = st.checkbox("4. Conteúdo no WhatsApp", value=parse_bool(record[col_map['grupo_whatsapp']]))
-                        chk_newsletter = st.checkbox("5. Newsletter da instituição/região", value=parse_bool(record[col_map['newsletter']]))
-                        chk_pf = st.checkbox("6. Apoio PF", value=parse_bool(record[col_map['apoio_pf']]))
+                        chk_kit = st.checkbox("2. Kit de Materiais (AD)", value=parse_cardapio_bool(record.get(col_map.get('kit_materiais'))))
+                        chk_video = st.checkbox("3. Vídeo de instagram (AE)", value=parse_cardapio_bool(record.get(col_map.get('video_instagram'))))
+                        chk_whatsapp = st.checkbox("4. Envio de conteúdo em grupos de whatsapp (AF)", value=parse_cardapio_bool(record.get(col_map.get('grupo_whatsapp'))))
+                        chk_marinas = st.checkbox("5. ENTRAR NO GRUPO DAS MARINAS (AG)", value=parse_cardapio_bool(record.get(col_map.get('grupo_marinas'))))
+                        chk_newsletter = st.checkbox("6. Newsletter da instituição/região (AH)", value=parse_cardapio_bool(record.get(col_map.get('newsletter'))))
+                        chk_pautas = st.checkbox("7. Contribuir com pautas (AI)", value=parse_cardapio_bool(record.get(col_map.get('contribuir_pautas'))))
+                        chk_perfuraid = st.checkbox("8. Perfuraid - adesivo de carro (AJ)", value=parse_cardapio_bool(record.get(col_map.get('perfuraid'))))
+                        chk_pf = st.checkbox("9. Apoio na PF (AK)", value=parse_cardapio_bool(record.get(col_map.get('apoio_pf'))))
+                        chk_voluntario = st.checkbox("10. Voluntário (AL)", value=parse_cardapio_bool(record.get(col_map.get('voluntario'))))
+                        chk_doacao = st.checkbox("11. Doação Financeira (AM)", value=parse_cardapio_bool(record.get(col_map.get('doacao_financeira'))))
                         
                         submit_btn = st.form_submit_button("💾 Salvar Alterações no Registro")
                         
@@ -1045,8 +1140,13 @@ if result[0] is not None:
                                 'kit_materiais': chk_kit,
                                 'video_instagram': chk_video,
                                 'grupo_whatsapp': chk_whatsapp,
+                                'grupo_marinas': chk_marinas,
                                 'newsletter': chk_newsletter,
-                                'apoio_pf': chk_pf
+                                'contribuir_pautas': chk_pautas,
+                                'perfuraid': chk_perfuraid,
+                                'apoio_pf': chk_pf,
+                                'voluntario': chk_voluntario,
+                                'doacao_financeira': chk_doacao
                             }
                             
                             if col_map.get('origem'):
@@ -1088,27 +1188,39 @@ if result[0] is not None:
                 col_map['kit_materiais'],
                 col_map['video_instagram'],
                 col_map['grupo_whatsapp'],
+                col_map['grupo_marinas'],
                 col_map['newsletter'],
-                col_map['apoio_pf']
+                col_map['contribuir_pautas'],
+                col_map['perfuraid'],
+                col_map['apoio_pf'],
+                col_map['voluntario'],
+                col_map['doacao_financeira']
             ]
             editable_cols_grid = [c for c in editable_cols_grid if c is not None]
             
             agenda_opts = ["NÃO", "SIM", "SIM - 1 agenda", "SIM - 2 agendas", "SIM - 3 agendas", "SIM - 4 agendas"]
             
+            # Setup columns configs safely checking if columns mapped exist
+            col_configs = {}
+            if col_map.get('status'): col_configs[col_map['status']] = st.column_config.SelectboxColumn("Status", options=status_options)
+            if col_map.get('responsavel'): col_configs[col_map['responsavel']] = st.column_config.SelectboxColumn("Responsável", options=list(OPERATORS.keys()) + ["Outros"])
+            if col_map.get('data_ultimo_contato'): col_configs[col_map['data_ultimo_contato']] = st.column_config.DateColumn("Último Contato")
+            if col_map.get('data_roda_conversa'): col_configs[col_map['data_roda_conversa']] = st.column_config.DateColumn("Roda Conversa")
+            if col_map.get('agenda_roda'): col_configs[col_map['agenda_roda']] = st.column_config.SelectboxColumn("Agenda/Roda", options=agenda_opts)
+            if col_map.get('kit_materiais'): col_configs[col_map['kit_materiais']] = st.column_config.CheckboxColumn("Kits")
+            if col_map.get('video_instagram'): col_configs[col_map['video_instagram']] = st.column_config.CheckboxColumn("Vídeo Insta")
+            if col_map.get('grupo_whatsapp'): col_configs[col_map['grupo_whatsapp']] = st.column_config.CheckboxColumn("Envio Zap")
+            if col_map.get('grupo_marinas'): col_configs[col_map['grupo_marinas']] = st.column_config.CheckboxColumn("Grupo Marinas")
+            if col_map.get('newsletter'): col_configs[col_map['newsletter']] = st.column_config.CheckboxColumn("Newsletter")
+            if col_map.get('contribuir_pautas'): col_configs[col_map['contribuir_pautas']] = st.column_config.CheckboxColumn("Pautas")
+            if col_map.get('perfuraid'): col_configs[col_map['perfuraid']] = st.column_config.CheckboxColumn("Perfuraid")
+            if col_map.get('apoio_pf'): col_configs[col_map['apoio_pf']] = st.column_config.CheckboxColumn("Apoio PF")
+            if col_map.get('voluntario'): col_configs[col_map['voluntario']] = st.column_config.CheckboxColumn("Voluntário")
+            if col_map.get('doacao_financeira'): col_configs[col_map['doacao_financeira']] = st.column_config.CheckboxColumn("Doação")
+            
             edited_df = st.data_editor(
                 filtered_df[editable_cols_grid],
-                column_config={
-                    col_map['status']: st.column_config.SelectboxColumn("Status", options=status_options),
-                    col_map['responsavel']: st.column_config.SelectboxColumn("Responsável", options=list(OPERATORS.keys()) + ["Outros"]),
-                    col_map['data_ultimo_contato']: st.column_config.DateColumn("Último Contato"),
-                    col_map['data_roda_conversa']: st.column_config.DateColumn("Roda Conversa"),
-                    col_map['agenda_roda']: st.column_config.SelectboxColumn("Agenda/Roda", options=agenda_opts),
-                    col_map['kit_materiais']: st.column_config.CheckboxColumn("Kits"),
-                    col_map['video_instagram']: st.column_config.CheckboxColumn("Vídeos"),
-                    col_map['grupo_whatsapp']: st.column_config.CheckboxColumn("WhatsApp"),
-                    col_map['newsletter']: st.column_config.CheckboxColumn("Newsletter"),
-                    col_map['apoio_pf']: st.column_config.CheckboxColumn("PF")
-                },
+                column_config=col_configs,
                 use_container_width=True,
                 hide_index=False,
                 key="crm_grid_editor_v3"
@@ -1131,9 +1243,10 @@ if result[0] is not None:
                             is_diff = False
                         elif pd.isna(val_orig) or pd.isna(val_new):
                             is_diff = True
-                        elif col in [col_map['kit_materiais'], col_map['video_instagram'], col_map['grupo_whatsapp'], 
-                                     col_map['newsletter'], col_map['apoio_pf']]:
-                            is_diff = parse_bool(val_orig) != parse_bool(val_new)
+                        elif col in [col_map.get('kit_materiais'), col_map.get('video_instagram'), col_map.get('grupo_whatsapp'), 
+                                     col_map.get('grupo_marinas'), col_map.get('newsletter'), col_map.get('contribuir_pautas'), 
+                                     col_map.get('perfuraid'), col_map.get('apoio_pf'), col_map.get('voluntario'), col_map.get('doacao_financeira')]:
+                            is_diff = parse_cardapio_bool(val_orig) != parse_cardapio_bool(val_new)
                         elif isinstance(val_orig, (datetime.datetime, datetime.date)) or isinstance(val_new, (datetime.datetime, datetime.date)):
                             is_diff = pd.to_datetime(val_orig) != pd.to_datetime(val_new)
                         else:
@@ -1280,8 +1393,13 @@ if result[0] is not None:
                         'kit_materiais': False,
                         'video_instagram': False,
                         'grupo_whatsapp': False,
+                        'grupo_marinas': False,
                         'newsletter': False,
-                        'apoio_pf': False
+                        'contribuir_pautas': False,
+                        'perfuraid': False,
+                        'apoio_pf': False,
+                        'voluntario': False,
+                        'doacao_financeira': False
                     }
                     if col_map.get('origem'):
                         new_record['origem'] = new_origem.strip()
