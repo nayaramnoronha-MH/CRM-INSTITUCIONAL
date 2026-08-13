@@ -719,6 +719,10 @@ if result[0] is not None:
     with tab_dashboard:
         st.subheader("📈 Visão Geral Superior e KPIs")
         
+        # Define status_col and date_col keys first to prevent NameError
+        status_col = col_map.get('status')
+        date_col = col_map.get('data_ultimo_contato')
+        
         # Define Mapeadas as total lines dynamically
         total_mapeadas = len(df)
         
