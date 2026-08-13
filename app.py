@@ -719,15 +719,19 @@ if result[0] is not None:
     with tab_dashboard:
         st.subheader("📈 Visão Geral Superior e KPIs")
         
-        # Calculate general KPIs
-        status_col = col_map['status']
-        date_col = col_map['data_ultimo_contato']
-        
-        is_contacted_series = (df[status_col].notna() & (df[status_col] != "Não contatado")) | df[date_col].notna()
+        # Define Mapeadas as total lines dynamically
         total_mapeadas = len(df)
-        total_contatadas = is_contacted_series.sum()
-        target_crm = 1500
-        progress_ratio = min(1.0, total_contatadas / target_crm)
+        
+        # Calculate Contatadas: Status in "em contato", "apoio fechado", "aguardando retorno" (stripping and lowercase)
+        if status_col and status_col in df.columns:
+            status_series = df[status_col].astype(str).str.strip().str.lower()
+            is_contacted_series = status_series.isin(["em contato", "apoio fechado", "aguardando retorno"])
+            total_contatadas = is_contacted_series.sum()
+        else:
+            is_contacted_series = pd.Series([False] * len(df))
+            total_contatadas = 0
+            
+        progress_ratio = total_contatadas / total_mapeadas if total_mapeadas > 0 else 0.0
         
         # Checklists metrics (recalculated for all 11 cardapio columns)
         roda_conversa_count = df[col_map['agenda_roda']].apply(parse_agenda_count).sum() if col_map.get('agenda_roda') else 0
@@ -746,9 +750,9 @@ if result[0] is not None:
         with col_kpi1:
             render_metric_card(
                 "Mapeadas vs. Contatadas", 
-                f"{total_contatadas} / {target_crm}", 
+                f"{total_contatadas} / {total_mapeadas}", 
                 color="#FF6B00", 
-                subtitle=f"Mapeados: {total_mapeadas} | Progresso: {progress_ratio*100:.1f}%"
+                subtitle=f"Progresso: {progress_ratio*100:.1f}%"
             )
         with col_kpi2:
             render_metric_card(
@@ -771,8 +775,8 @@ if result[0] is not None:
                 color="#E6007E", 
                 subtitle="Apoio na PF = SIM"
             )
-
-        st.write("**Progresso Geral rumo às 1.500 Contatas**")
+ 
+        st.write(f"**Progresso Geral ({progress_ratio*100:.1f}%)**")
         st.progress(progress_ratio)
         
         # LOCKED / READ-ONLY SECTION
