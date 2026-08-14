@@ -658,11 +658,13 @@ if result[0] is not None:
 
     # Status filter
     status_col = col_map.get('status')
-    status_options = ["Não contatado", "Em contato", "Aguardando retorno", "Apoio Fechado"]
+    status_options = ["Não Contatado", "Em contato", "Apoio fechado", "Recusou Apoio", "Problemas Técnicos"]
     sheet_statuses = list(df[status_col].dropna().unique()) if status_col else []
     for s in sheet_statuses:
-        if s not in status_options:
-            status_options.append(s)
+        s_clean = str(s).strip()
+        # Case-insensitive exists check to avoid duplicates in the options list
+        if s_clean and not any(s_clean.lower() == x.lower() for x in status_options):
+            status_options.append(s_clean)
             
     status_filter = st.sidebar.multiselect(
         "Status",
@@ -726,10 +728,10 @@ if result[0] is not None:
         # Define Mapeadas as total lines dynamically
         total_mapeadas = len(df)
         
-        # Calculate Contatadas: Status in "em contato", "apoio fechado", "aguardando retorno" (stripping and lowercase)
+        # Calculate Contatadas: Status in "em contato", "apoio fechado", "recusou apoio" (stripping and lowercase)
         if status_col and status_col in df.columns:
             status_series = df[status_col].astype(str).str.strip().str.lower()
-            is_contacted_series = status_series.isin(["em contato", "apoio fechado", "aguardando retorno"])
+            is_contacted_series = status_series.isin(["em contato", "apoio fechado", "recusou apoio"])
             total_contatadas = is_contacted_series.sum()
         else:
             is_contacted_series = pd.Series([False] * len(df))
@@ -1350,12 +1352,8 @@ if result[0] is not None:
     with tab_cadastro:
         st.subheader("➕ Formulário de Cadastro de Nova Entidade/Liderança")
         
-        # Extract unique statuses and pautas dynamically
-        status_col = col_map.get('status')
-        status_options_unique = []
-        if status_col and status_col in df.columns:
-            status_options_unique = sorted(list(set(str(x).strip() for x in df[status_col].dropna().unique() if str(x).strip())))
-        status_select_options = [""] + status_options_unique
+        # Enforce standard status vocabulary for new registrations
+        status_select_options = [""] + ["Não Contatado", "Em contato", "Apoio fechado", "Recusou Apoio", "Problemas Técnicos"]
         
         pauta_col = col_map.get('pauta')
         pauta_options_unique = []
