@@ -306,7 +306,7 @@ def parse_agenda_count(val):
         return 1
     return 0
 
-# Count the number of supports closed in a single row (expanding to 11 columns)
+# Count the number of supports closed in a single row (expanding to 13 frentes)
 def get_row_apoios_count(row, col_map):
     count = 0
     if col_map.get('agenda_roda'):
@@ -315,7 +315,8 @@ def get_row_apoios_count(row, col_map):
     cardapio_keys = [
         'kit_materiais', 'video_instagram', 'grupo_whatsapp',
         'grupo_marinas', 'newsletter', 'contribuir_pautas',
-        'perfuraid', 'apoio_pf', 'voluntario', 'doacao_financeira'
+        'perfuraid', 'apoio_pf', 'voluntario', 'doacao_financeira',
+        'cartinha', 'aniversario_mh'
     ]
     for key in cardapio_keys:
         col_name = col_map.get(key)
@@ -390,7 +391,7 @@ def load_data_from_sheets():
         
         df = pd.DataFrame(data, columns=original_cols)
         
-        # Flex column mapping (expanded for all 11 cardapio columns)
+        # Flex column mapping (expanded for all 13 cardapio columns and free-text support fields)
         standard_columns = {
             'instituicao': ['nome da institui', 'institui'],
             'representante': ['nome e sobrenome', 'representante', 'nome do contato'],
@@ -416,6 +417,10 @@ def load_data_from_sheets():
             'apoio_pf': ['apoio na pf', 'apoio pf'],
             'voluntario': ['voluntário', 'voluntario'],
             'doacao_financeira': ['doação financeira', 'doacao', 'financeira'],
+            'cartinha': ['cartinha'],
+            'aniversario_mh': ['aniversário mh', 'aniversario mh', 'aniversário m.h.', 'aniversario m.h.'],
+            'outros_apoios': ['outros apoios', 'outro apoio'],
+            'endereco_kit_cartinha': ['endereço para receber o kit/cartinha', 'endereco para receber o kit/cartinha', 'endereço para receber', 'endereco kit/cartinha'],
             'data_ultimo_contato': ['data do último contato', 'ultimo contato'],
             'data_roda_conversa': ['data da roda'],
             'instagram': ['instagram'],
@@ -439,7 +444,8 @@ def load_data_from_sheets():
         cardapio_keys = [
             'kit_materiais', 'video_instagram', 'grupo_whatsapp',
             'grupo_marinas', 'newsletter', 'contribuir_pautas',
-            'perfuraid', 'apoio_pf', 'voluntario', 'doacao_financeira'
+            'perfuraid', 'apoio_pf', 'voluntario', 'doacao_financeira',
+            'cartinha', 'aniversario_mh'
         ]
         for key in cardapio_keys:
             col_name = col_map.get(key)
@@ -526,7 +532,7 @@ def update_google_sheet_row(worksheet, row_idx, updates, col_map, original_cols)
                 formatted_val = ""
                 if key == 'agenda_roda':
                     formatted_val = str(val)
-                elif key in ['kit_materiais', 'video_instagram', 'grupo_whatsapp', 'newsletter', 'apoio_pf', 'doacao_financeira']:
+                elif key in ['kit_materiais', 'video_instagram', 'grupo_whatsapp', 'grupo_marinas', 'newsletter', 'contribuir_pautas', 'perfuraid', 'apoio_pf', 'voluntario', 'doacao_financeira', 'cartinha', 'aniversario_mh']:
                     formatted_val = "sim" if parse_bool(val) else "não"
                 elif key in ['data_ultimo_contato', 'data_roda_conversa']:
                     if val is None or pd.isna(val):
@@ -569,7 +575,7 @@ def append_google_sheet_row(worksheet, new_record, col_map, original_cols):
                 
                 if key == 'agenda_roda':
                     row_values[col_idx] = str(val)
-                elif key in ['kit_materiais', 'video_instagram', 'grupo_whatsapp', 'newsletter', 'apoio_pf', 'doacao_financeira']:
+                elif key in ['kit_materiais', 'video_instagram', 'grupo_whatsapp', 'grupo_marinas', 'newsletter', 'contribuir_pautas', 'perfuraid', 'apoio_pf', 'voluntario', 'doacao_financeira', 'cartinha', 'aniversario_mh']:
                     row_values[col_idx] = "sim" if parse_bool(val) else "não"
                 else:
                     row_values[col_idx] = "" if (pd.isna(val) or val is None) else str(val)
@@ -616,7 +622,7 @@ if result[0] is not None:
         placeholder="Todos os responsáveis"
     )
     
-    # Cardápio de Apoio filter (expanded for all 11 columns)
+    # Cardápio de Apoio filter (expanded for all 13 frentes)
     SUPPORT_FILTER_MAP = {
         "Agenda / Roda Temática": "agenda_roda",
         "Kit de Materiais": "kit_materiais",
@@ -628,7 +634,9 @@ if result[0] is not None:
         "Perfuraid - adesivo de carro": "perfuraid",
         "Apoio na PF": "apoio_pf",
         "Voluntário": "voluntario",
-        "Doação Financeira": "doacao_financeira"
+        "Doação Financeira": "doacao_financeira",
+        "Cartinha": "cartinha",
+        "Aniversário MH": "aniversario_mh"
     }
     
     selected_supports = st.sidebar.multiselect(
@@ -739,7 +747,7 @@ if result[0] is not None:
             
         progress_ratio = total_contatadas / total_mapeadas if total_mapeadas > 0 else 0.0
         
-        # Checklists metrics (recalculated for all 11 cardapio columns)
+        # Checklists metrics (recalculated for all 13 cardapio frentes)
         roda_conversa_count = df[col_map['agenda_roda']].apply(parse_agenda_count).sum() if col_map.get('agenda_roda') else 0
         kit_count = df[col_map['kit_materiais']].apply(parse_cardapio_bool).sum() if col_map.get('kit_materiais') else 0
         video_count = df[col_map['video_instagram']].apply(parse_cardapio_bool).sum() if col_map.get('video_instagram') else 0
@@ -751,6 +759,8 @@ if result[0] is not None:
         pf_count = df[col_map['apoio_pf']].apply(parse_cardapio_bool).sum() if col_map.get('apoio_pf') else 0
         voluntario_count = df[col_map['voluntario']].apply(parse_cardapio_bool).sum() if col_map.get('voluntario') else 0
         doacao_count = df[col_map['doacao_financeira']].apply(parse_cardapio_bool).sum() if col_map.get('doacao_financeira') else 0
+        cartinha_count = df[col_map['cartinha']].apply(parse_cardapio_bool).sum() if col_map.get('cartinha') else 0
+        aniversario_mh_count = df[col_map['aniversario_mh']].apply(parse_cardapio_bool).sum() if col_map.get('aniversario_mh') else 0
         
         col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
         with col_kpi1:
@@ -830,16 +840,16 @@ if result[0] is not None:
         
         st.markdown("### 📊 Volumes do Cardápio Político (Histórico)")
         
-        # Plotly horizontal bar chart for the 11 frentes (High-End UX)
+        # Plotly horizontal bar chart for the 13 frentes (High-End UX)
         frentes_labels = [
             "Agendas/Rodas", "Kits de Materiais", "Vídeos Instagram", "Grupos WhatsApp",
             "Grupo das Marinas", "Newsletter", "Contribuir Pautas", "Perfuraid (Adesivos)",
-            "Apoios PF", "Voluntários", "Doações Financeiras"
+            "Apoios PF", "Voluntários", "Doações Financeiras", "Cartinha", "Aniversário MH"
         ]
         frentes_volumes = [
             int(roda_conversa_count), int(kit_count), int(video_count), int(whatsapp_count),
             int(grupo_marinas_count), int(newsletter_count), int(pautas_count), int(perfuraid_count),
-            int(pf_count), int(voluntario_count), int(doacao_count)
+            int(pf_count), int(voluntario_count), int(doacao_count), int(cartinha_count), int(aniversario_mh_count)
         ]
         df_volumes = pd.DataFrame({
             'Frente': frentes_labels,
@@ -857,14 +867,14 @@ if result[0] is not None:
             title='Volume Total por Frente do Cardápio de Apoio'
         )
         fig_frentes.update_layout(
-            height=400,
+            height=460,
             margin=dict(l=0, r=0, t=30, b=0),
             coloraxis_showscale=False
         )
         st.plotly_chart(fig_frentes, use_container_width=True)
         
-        st.markdown("#### Detalhamento das 11 Frentes")
-        row1_cols = st.columns(6)
+        st.markdown("#### Detalhamento das 13 Frentes")
+        row1_cols = st.columns(7)
         with row1_cols[0]:
             render_metric_card("Agendas/Rodas", f"{int(roda_conversa_count)}", "#FF6B00")
         with row1_cols[1]:
@@ -877,17 +887,21 @@ if result[0] is not None:
             render_metric_card("Grupo Marinas", f"{grupo_marinas_count}", "#FF6B00")
         with row1_cols[5]:
             render_metric_card("Newsletters", f"{newsletter_count}", "#E6007E")
+        with row1_cols[6]:
+            render_metric_card("Cartinha", f"{cartinha_count}", "#FF6B00")
             
-        row2_cols = st.columns(5)
+        row2_cols = st.columns(6)
         with row2_cols[0]:
-            render_metric_card("Contribuir Pautas", f"{pautas_count}", "#FF6B00")
+            render_metric_card("Aniversário MH", f"{aniversario_mh_count}", "#E6007E")
         with row2_cols[1]:
-            render_metric_card("Perfuraid", f"{perfuraid_count}", "#E6007E")
+            render_metric_card("Contribuir Pautas", f"{pautas_count}", "#FF6B00")
         with row2_cols[2]:
-            render_metric_card("Apoios PF", f"{pf_count}", "#FF6B00")
+            render_metric_card("Perfuraid", f"{perfuraid_count}", "#E6007E")
         with row2_cols[3]:
-            render_metric_card("Voluntários", f"{voluntario_count}", "#E6007E")
+            render_metric_card("Apoios PF", f"{pf_count}", "#FF6B00")
         with row2_cols[4]:
+            render_metric_card("Voluntários", f"{voluntario_count}", "#E6007E")
+        with row2_cols[5]:
             render_metric_card("Doações", f"{doacao_count}", "#FF6B00")
 
         # WhatsApp Summary Generator (read-only trigger)
@@ -918,11 +932,13 @@ if result[0] is not None:
             pautas_sem = op_df_week[col_map['contribuir_pautas']].apply(parse_cardapio_bool).sum() if col_map.get('contribuir_pautas') else 0
             perfuraid_sem = op_df_week[col_map['perfuraid']].apply(parse_cardapio_bool).sum() if col_map.get('perfuraid') else 0
             pf_sem = op_df_week[col_map['apoio_pf']].apply(parse_cardapio_bool).sum() if col_map.get('apoio_pf') else 0
-            voluntario_sem = op_df_week[col_map['voluntario']].apply(parse_cardapio_bool).sum() if col_map.get('voluntario') else 0
+            voluntario_sem = op_df_week[col_map['voluntario']].apply(parse_cardapio_bool).sum() if op_df_week.get(col_map.get('voluntario')) is not None else 0
             doacao_sem = op_df_week[col_map['doacao_financeira']].apply(parse_cardapio_bool).sum() if col_map.get('doacao_financeira') else 0
+            cartinha_sem = op_df_week[col_map['cartinha']].apply(parse_cardapio_bool).sum() if col_map.get('cartinha') else 0
+            aniversario_sem = op_df_week[col_map['aniversario_mh']].apply(parse_cardapio_bool).sum() if col_map.get('aniversario_mh') else 0
             
             apoios_sem_sum = (agendas_sem + kits_sem + videos_sem + wa_sem + marinas_sem + 
-                              news_sem + pautas_sem + perfuraid_sem + pf_sem + voluntario_sem + doacao_sem)
+                              news_sem + pautas_sem + perfuraid_sem + pf_sem + voluntario_sem + doacao_sem + cartinha_sem + aniversario_sem)
             
             total_op_mapeadas = len(op_df)
             total_op_contatadas = is_contacted_series[op_mask].sum()
@@ -948,6 +964,8 @@ if result[0] is not None:
 - Apoios PF: {pf_sem}
 - Voluntários: {voluntario_sem}
 - Doações: {doacao_sem}
+- Cartinhas: {cartinha_sem}
+- Aniversário MH: {aniversario_sem}
 
 *📊 Produção Histórica:*
 - Total de Instituições Mapeadas: {total_op_mapeadas}
@@ -1131,6 +1149,21 @@ if result[0] is not None:
                         chk_pf = st.checkbox("9. Apoio na PF (AK)", value=parse_cardapio_bool(record.get(col_map.get('apoio_pf'))))
                         chk_voluntario = st.checkbox("10. Voluntário (AL)", value=parse_cardapio_bool(record.get(col_map.get('voluntario'))))
                         chk_doacao = st.checkbox("11. Doação Financeira (AM)", value=parse_cardapio_bool(record.get(col_map.get('doacao_financeira'))))
+                        chk_cartinha = st.checkbox("12. Cartinha (AN)", value=parse_cardapio_bool(record.get(col_map.get('cartinha'))))
+                        chk_aniversario = st.checkbox("13. Aniversário MH (AO)", value=parse_cardapio_bool(record.get(col_map.get('aniversario_mh'))))
+                        
+                        new_addr_kit_cartinha = ""
+                        if chk_kit or chk_cartinha:
+                            new_addr_kit_cartinha = st.text_input(
+                                "Endereço para Receber o Kit/Cartinha (AQ)",
+                                value=str(record.get(col_map.get('endereco_kit_cartinha'), "")) if col_map.get('endereco_kit_cartinha') and not pd.isna(record.get(col_map.get('endereco_kit_cartinha'))) else "",
+                                placeholder="Ex: Rua/Avenida, número, Complemento/Apto, CEP, Cidade - UF"
+                            )
+                            
+                        new_outros_apoios = st.text_input(
+                            "Outros Apoios (AP)",
+                            value=str(record.get(col_map.get('outros_apoios'), "")) if col_map.get('outros_apoios') and not pd.isna(record.get(col_map.get('outros_apoios'))) else ""
+                        )
                         
                         submit_btn = st.form_submit_button("💾 Salvar Alterações no Registro")
                         
@@ -1156,7 +1189,11 @@ if result[0] is not None:
                                 'perfuraid': chk_perfuraid,
                                 'apoio_pf': chk_pf,
                                 'voluntario': chk_voluntario,
-                                'doacao_financeira': chk_doacao
+                                'doacao_financeira': chk_doacao,
+                                'cartinha': chk_cartinha,
+                                'aniversario_mh': chk_aniversario,
+                                'outros_apoios': new_outros_apoios,
+                                'endereco_kit_cartinha': new_addr_kit_cartinha
                             }
                             
                             if col_map.get('origem'):
@@ -1204,7 +1241,11 @@ if result[0] is not None:
                 col_map['perfuraid'],
                 col_map['apoio_pf'],
                 col_map['voluntario'],
-                col_map['doacao_financeira']
+                col_map['doacao_financeira'],
+                col_map['cartinha'],
+                col_map['aniversario_mh'],
+                col_map['outros_apoios'],
+                col_map['endereco_kit_cartinha']
             ]
             editable_cols_grid = [c for c in editable_cols_grid if c is not None]
             
@@ -1227,6 +1268,10 @@ if result[0] is not None:
             if col_map.get('apoio_pf'): col_configs[col_map['apoio_pf']] = st.column_config.CheckboxColumn("Apoio PF")
             if col_map.get('voluntario'): col_configs[col_map['voluntario']] = st.column_config.CheckboxColumn("Voluntário")
             if col_map.get('doacao_financeira'): col_configs[col_map['doacao_financeira']] = st.column_config.CheckboxColumn("Doação")
+            if col_map.get('cartinha'): col_configs[col_map['cartinha']] = st.column_config.CheckboxColumn("Cartinha")
+            if col_map.get('aniversario_mh'): col_configs[col_map['aniversario_mh']] = st.column_config.CheckboxColumn("Aniversário MH")
+            if col_map.get('outros_apoios'): col_configs[col_map['outros_apoios']] = st.column_config.TextColumn("Outros Apoios")
+            if col_map.get('endereco_kit_cartinha'): col_configs[col_map['endereco_kit_cartinha']] = st.column_config.TextColumn("Endereço Kit/Cartinha")
             
             edited_df = st.data_editor(
                 filtered_df[editable_cols_grid],
@@ -1255,7 +1300,8 @@ if result[0] is not None:
                             is_diff = True
                         elif col in [col_map.get('kit_materiais'), col_map.get('video_instagram'), col_map.get('grupo_whatsapp'), 
                                      col_map.get('grupo_marinas'), col_map.get('newsletter'), col_map.get('contribuir_pautas'), 
-                                     col_map.get('perfuraid'), col_map.get('apoio_pf'), col_map.get('voluntario'), col_map.get('doacao_financeira')]:
+                                     col_map.get('perfuraid'), col_map.get('apoio_pf'), col_map.get('voluntario'), col_map.get('doacao_financeira'),
+                                     col_map.get('cartinha'), col_map.get('aniversario_mh')]:
                             is_diff = parse_cardapio_bool(val_orig) != parse_cardapio_bool(val_new)
                         elif isinstance(val_orig, (datetime.datetime, datetime.date)) or isinstance(val_new, (datetime.datetime, datetime.date)):
                             is_diff = pd.to_datetime(val_orig) != pd.to_datetime(val_new)
@@ -1405,7 +1451,11 @@ if result[0] is not None:
                         'perfuraid': False,
                         'apoio_pf': False,
                         'voluntario': False,
-                        'doacao_financeira': False
+                        'doacao_financeira': False,
+                        'cartinha': False,
+                        'aniversario_mh': False,
+                        'outros_apoios': "",
+                        'endereco_kit_cartinha': ""
                     }
                     if col_map.get('origem'):
                         new_record['origem'] = new_origem.strip()
