@@ -1152,12 +1152,15 @@ if result[0] is not None:
                         chk_cartinha = st.checkbox("12. Cartinha (AN)", value=parse_cardapio_bool(record.get(col_map.get('cartinha'))))
                         chk_aniversario = st.checkbox("13. Aniversário MH (AO)", value=parse_cardapio_bool(record.get(col_map.get('aniversario_mh'))))
                         
+                        prev_addr_val = str(record.get(col_map.get('endereco_kit_cartinha'), "")).strip() if col_map.get('endereco_kit_cartinha') and not pd.isna(record.get(col_map.get('endereco_kit_cartinha'))) else ""
+                        has_prev_address = prev_addr_val != ""
+                        
                         new_addr_kit_cartinha = ""
-                        if chk_kit or chk_cartinha:
+                        if chk_kit or chk_cartinha or has_prev_address:
                             new_addr_kit_cartinha = st.text_input(
-                                "Endereço para Receber o Kit/Cartinha (AQ)",
-                                value=str(record.get(col_map.get('endereco_kit_cartinha'), "")) if col_map.get('endereco_kit_cartinha') and not pd.isna(record.get(col_map.get('endereco_kit_cartinha'))) else "",
-                                placeholder="Ex: Rua/Avenida, número, Complemento/Apto, CEP, Cidade - UF"
+                                "Endereço para Receber o Kit/Cartinha",
+                                value=prev_addr_val,
+                                placeholder="Ex: Rua/Avenida, número, Complemento/Apto, Bairro, CEP, Cidade - UF"
                             )
                             
                         new_outros_apoios = st.text_input(
