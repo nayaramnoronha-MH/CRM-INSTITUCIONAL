@@ -1160,7 +1160,8 @@ if result[0] is not None:
                             new_addr_kit_cartinha = st.text_input(
                                 "Endereço para Receber o Kit/Cartinha",
                                 value=prev_addr_val,
-                                placeholder="Ex: Rua/Avenida, número, Complemento/Apto, Bairro, CEP, Cidade - UF"
+                                placeholder="Ex: Rua/Avenida, número, Complemento/Apto, Bairro, CEP, Cidade - UF",
+                                help="Preencha o endereço completo para o envio de Kits ou Cartinhas"
                             )
                             
                         new_outros_apoios = st.text_input(
