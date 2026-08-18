@@ -420,7 +420,7 @@ def load_data_from_sheets():
             'cartinha': ['cartinha'],
             'aniversario_mh': ['aniversário mh', 'aniversario mh', 'aniversário m.h.', 'aniversario m.h.'],
             'outros_apoios': ['outros apoios', 'outro apoio'],
-            'endereco_kit_cartinha': ['endereço para receber o kit/cartinha', 'endereco para receber o kit/cartinha', 'endereço para receber', 'endereco kit/cartinha'],
+            'endereco_kit': ['endereço para receber o kit/cartinha', 'endereco para receber o kit/cartinha', 'endereço para receber', 'endereco kit/cartinha'],
             'data_ultimo_contato': ['data do último contato', 'ultimo contato'],
             'data_roda_conversa': ['data da roda'],
             'instagram': ['instagram'],
@@ -1083,6 +1083,15 @@ if result[0] is not None:
                         orig_col = col_map.get('origem')
                         new_origem = st.text_input("Origem da Instituição", value=str(record[orig_col]) if orig_col and not pd.isna(record[orig_col]) else "")
                         
+                        # Fixed address field in Informações Básicas
+                        row_data = record
+                        endereco_kit = st.text_input(
+                            "Endereço para Receber o Kit/Cartinha",
+                            value=str(row_data.get(col_map.get('endereco_kit', 'Endereço para Receber o Kit/Cartinha'), '') or '') if pd.notna(row_data.get(col_map.get('endereco_kit', 'Endereço para Receber o Kit/Cartinha'), '')) else '',
+                            placeholder="Ex: Rua/Avenida, número, Complemento/Apto, Bairro, CEP, Cidade - UF",
+                            help="Endereço para envio de kit de materiais ou cartinhas"
+                        )
+                        
                         st.divider()
                         st.subheader("Filtros e Responsável")
                         
@@ -1152,18 +1161,6 @@ if result[0] is not None:
                         chk_cartinha = st.checkbox("12. Cartinha (AN)", value=parse_cardapio_bool(record.get(col_map.get('cartinha'))))
                         chk_aniversario = st.checkbox("13. Aniversário MH (AO)", value=parse_cardapio_bool(record.get(col_map.get('aniversario_mh'))))
                         
-                        prev_addr_val = str(record.get(col_map.get('endereco_kit_cartinha'), "")).strip() if col_map.get('endereco_kit_cartinha') and not pd.isna(record.get(col_map.get('endereco_kit_cartinha'))) else ""
-                        has_prev_address = prev_addr_val != ""
-                        
-                        new_addr_kit_cartinha = ""
-                        if chk_kit or chk_cartinha or has_prev_address:
-                            new_addr_kit_cartinha = st.text_input(
-                                "Endereço para Receber o Kit/Cartinha",
-                                value=prev_addr_val,
-                                placeholder="Ex: Rua/Avenida, número, Complemento/Apto, Bairro, CEP, Cidade - UF",
-                                help="Preencha o endereço completo para o envio de Kits ou Cartinhas"
-                            )
-                            
                         new_outros_apoios = st.text_input(
                             "Outros Apoios (AP)",
                             value=str(record.get(col_map.get('outros_apoios'), "")) if col_map.get('outros_apoios') and not pd.isna(record.get(col_map.get('outros_apoios'))) else ""
@@ -1197,7 +1194,7 @@ if result[0] is not None:
                                 'cartinha': chk_cartinha,
                                 'aniversario_mh': chk_aniversario,
                                 'outros_apoios': new_outros_apoios,
-                                'endereco_kit_cartinha': new_addr_kit_cartinha
+                                'endereco_kit': endereco_kit
                             }
                             
                             if col_map.get('origem'):
@@ -1249,7 +1246,7 @@ if result[0] is not None:
                 col_map['cartinha'],
                 col_map['aniversario_mh'],
                 col_map['outros_apoios'],
-                col_map['endereco_kit_cartinha']
+                col_map['endereco_kit']
             ]
             editable_cols_grid = [c for c in editable_cols_grid if c is not None]
             
@@ -1275,7 +1272,7 @@ if result[0] is not None:
             if col_map.get('cartinha'): col_configs[col_map['cartinha']] = st.column_config.CheckboxColumn("Cartinha")
             if col_map.get('aniversario_mh'): col_configs[col_map['aniversario_mh']] = st.column_config.CheckboxColumn("Aniversário MH")
             if col_map.get('outros_apoios'): col_configs[col_map['outros_apoios']] = st.column_config.TextColumn("Outros Apoios")
-            if col_map.get('endereco_kit_cartinha'): col_configs[col_map['endereco_kit_cartinha']] = st.column_config.TextColumn("Endereço Kit/Cartinha")
+            if col_map.get('endereco_kit'): col_configs[col_map['endereco_kit']] = st.column_config.TextColumn("Endereço Kit/Cartinha")
             
             edited_df = st.data_editor(
                 filtered_df[editable_cols_grid],
@@ -1459,7 +1456,7 @@ if result[0] is not None:
                         'cartinha': False,
                         'aniversario_mh': False,
                         'outros_apoios': "",
-                        'endereco_kit_cartinha': ""
+                        'endereco_kit': ""
                     }
                     if col_map.get('origem'):
                         new_record['origem'] = new_origem.strip()
