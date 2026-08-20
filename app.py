@@ -22,12 +22,15 @@ st.set_page_config(
 
 # Standard Responsibles (Nayara removed, Edilson added)
 OPERATORS = {
-    'CARLOS': {'color': '#FF6B00'},
-    'CLARINHA': {'color': '#E6007E'},
     'VERÔNICA': {'color': '#4F46E5'},
-    'EDILSON': {'color': '#10B981'},
+    'CARLOS': {'color': '#FF6B00'},
     'PEDRO': {'color': '#F59E0B'},
-    'RAQUIL': {'color': '#06B6D4'}
+    'EDILSON': {'color': '#10B981'},
+    'NAYARA': {'color': '#EC4899'},
+    'RAQUIL': {'color': '#06B6D4'},
+    'CLARINHA': {'color': '#E6007E'},
+    'CAIO': {'color': '#8B5CF6'},
+    'VIEGAS': {'color': '#F97316'}
 }
 
 # Predefined coordinates dictionary for SP cities
@@ -266,7 +269,9 @@ def normalize_responsavel(name):
     if pd.isna(name):
         return 'Outros'
     name_str = str(name).strip().upper()
-    if 'CARLOS' in name_str:
+    if 'VIEGAS' in name_str:
+        return 'VIEGAS'
+    elif 'CARLOS' in name_str:
         return 'CARLOS'
     elif 'CLARINHA' in name_str or name_str == 'CLARA':
         return 'CLARINHA'
@@ -278,6 +283,10 @@ def normalize_responsavel(name):
         return 'PEDRO'
     elif 'RAQUIL' in name_str:
         return 'RAQUIL'
+    elif 'NAYARA' in name_str:
+        return 'NAYARA'
+    elif 'CAIO' in name_str:
+        return 'CAIO'
     return name_str
 
 # Agenda/Roda temática regex absolute count parser
