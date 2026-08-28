@@ -1352,56 +1352,102 @@ if result[0] is not None:
         
         map_df = filtered_df.copy()
         
-        lats = []
-        lons = []
-        muni_col = col_map['municipio']
-        
-        for _, row in map_df.iterrows():
-            city = row.get(muni_col)
-            lat, lon = get_city_coords(city)
-            lats.append(lat)
-            lons.append(lon)
+        # Validation of Coordinates & DataFrame emptyness
+        if map_df.empty:
+            st.warning("⚠️ Nenhum registro encontrado para exibir no mapa com os filtros atuais.")
+        else:
+            lats = []
+            lons = []
+            muni_col = col_map.get('municipio')
             
-        map_df["lat"] = lats
-        map_df["lon"] = lons
-        
-        map_df["Responsável Oficial"] = map_df[col_map['responsavel']].apply(normalize_responsavel)
-        
-        px_color_map = {op: OPERATORS[op]['color'] for op in OPERATORS}
-        px_color_map['Outros'] = '#9CA3AF'
-        
-        fig = px.scatter_mapbox(
-            map_df,
-            lat="lat",
-            lon="lon",
-            color="Responsável Oficial",
-            color_discrete_map=px_color_map,
-            hover_name=col_map['instituicao'],
-            hover_data={
-                col_map['representante']: True,
-                col_map['status']: True,
-                col_map['pauta']: True,
-                'lat': False,
-                'lon': False
-            },
-            zoom=6.5,
-            center={"lat": -23.5505, "lon": -46.6333},
-            height=600
-        )
-        
-        fig.update_layout(
-            mapbox_style="open-street-map",
-            margin={"r": 0, "t": 0, "l": 0, "b": 0},
-            legend=dict(
-                yanchor="top",
-                y=0.99,
-                xanchor="left",
-                x=0.01,
-                bgcolor="rgba(255, 255, 255, 0.8)"
-            )
-        )
-        
-        st.plotly_chart(fig, use_container_width=True)
+            for _, row in map_df.iterrows():
+                city = row.get(muni_col) if muni_col else None
+                lat, lon = get_city_coords(city)
+                lats.append(lat)
+                lons.append(lon)
+                
+            map_df["lat"] = lats
+            map_df["lon"] = lons
+            
+            # Remove any rows with NaN/None coordinates
+            map_df = map_df.dropna(subset=["lat", "lon"])
+            
+            if map_df.empty:
+                st.warning("⚠️ Nenhum registro possui coordenadas válidas para exibir no mapa.")
+            else:
+                map_df["Responsável Oficial"] = map_df[col_map['responsavel']].apply(normalize_responsavel) if col_map.get('responsavel') else "Outros"
+                
+                px_color_map = {op: OPERATORS[op]['color'] for op in OPERATORS}
+                px_color_map['Outros'] = '#9CA3AF'
+                
+                # Check dynamic availability of scatter_map vs scatter_mapbox (Plotly 6.0 compatibility)
+                fig = None
+                try:
+                    if hasattr(px, "scatter_map"):
+                        fig = px.scatter_map(
+                            map_df,
+                            lat="lat",
+                            lon="lon",
+                            color="Responsável Oficial",
+                            color_discrete_map=px_color_map,
+                            hover_name=col_map['instituicao'],
+                            hover_data={
+                                col_map['representante']: True,
+                                col_map['status']: True,
+                                col_map['pauta']: True,
+                                'lat': False,
+                                'lon': False
+                            },
+                            zoom=6.5,
+                            center={"lat": -23.5505, "lon": -46.6333},
+                            height=600
+                        )
+                        fig.update_layout(
+                            map_style="open-street-map",
+                            margin={"r": 0, "t": 0, "l": 0, "b": 0},
+                            legend=dict(
+                                yanchor="top",
+                                y=0.99,
+                                xanchor="left",
+                                x=0.01,
+                                bgcolor="rgba(255, 255, 255, 0.8)"
+                            )
+                        )
+                    else:
+                        fig = px.scatter_mapbox(
+                            map_df,
+                            lat="lat",
+                            lon="lon",
+                            color="Responsável Oficial",
+                            color_discrete_map=px_color_map,
+                            hover_name=col_map['instituicao'],
+                            hover_data={
+                                col_map['representante']: True,
+                                col_map['status']: True,
+                                col_map['pauta']: True,
+                                'lat': False,
+                                'lon': False
+                            },
+                            zoom=6.5,
+                            center={"lat": -23.5505, "lon": -46.6333},
+                            height=600
+                        )
+                        fig.update_layout(
+                            mapbox_style="open-street-map",
+                            margin={"r": 0, "t": 0, "l": 0, "b": 0},
+                            legend=dict(
+                                yanchor="top",
+                                y=0.99,
+                                xanchor="left",
+                                x=0.01,
+                                bgcolor="rgba(255, 255, 255, 0.8)"
+                            )
+                        )
+                except Exception as e:
+                    st.error(f"Erro ao renderizar o mapa interativo: {e}")
+                
+                if fig is not None:
+                    st.plotly_chart(fig, use_container_width=True)
 
 
     # ------------------ TAB 4: CADASTRO ------------------
