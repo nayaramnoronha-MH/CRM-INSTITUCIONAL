@@ -468,6 +468,42 @@ def load_data_from_sheets():
                 df[col_name] = df[col_name].replace('', None)
                 df[col_name] = pd.to_datetime(df[col_name], errors='coerce', dayfirst=True)
                 
+        # Exclusão inicial de dados (Responsáveis & Órgão Público)
+        # 1. Filtro de Responsáveis a excluir
+        nomes_excluidos = [
+            "nayara",
+            "caio",
+            "joão",
+            "joao",
+            "pedro viegas",
+            "viegas",
+        ]
+        coluna_resp = col_map.get('responsavel')
+        if coluna_resp and coluna_resp in df.columns:
+            mascara_resp = (
+                df[coluna_resp]
+                .astype(str)
+                .str.lower()
+                .str.strip()
+                .apply(lambda x: any(nome in x for nome in nomes_excluidos))
+            )
+            df = df[~mascara_resp].copy()
+
+        # 2. Filtro da Coluna G (Órgão Público)
+        coluna_g = df.columns[6] if len(df.columns) > 6 else "Coluna G"
+
+        if coluna_g in df.columns:
+            mascara_orgao = (
+                df[coluna_g]
+                .astype(str)
+                .str.lower()
+                .str.normalize("NFKD")
+                .str.encode("ascii", errors="ignore")
+                .str.decode("utf-8")
+                .str.contains("orgao publico", na=False)
+            )
+            df = df[~mascara_orgao].copy()
+                
         return df, col_map, original_cols, worksheet
         
     except Exception as e:
