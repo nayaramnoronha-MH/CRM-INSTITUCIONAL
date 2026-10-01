@@ -867,6 +867,18 @@ if result[0] is not None:
             'Total Contatos (Histórico)': total_contacts_hist
         })
         
+        # Nomes a serem removidos da tabela de produção
+        nomes_remover_tabela = ["CAIO", "VIEGAS", "NAYARA"]
+
+        # Normaliza para maiúsculas e remove os nomes indesejados
+        metas_df = metas_df[
+            ~metas_df["Responsável"]
+            .astype(str)
+            .str.upper()
+            .str.strip()
+            .isin(nomes_remover_tabela)
+        ].copy()
+        
         st.dataframe(
             metas_df,
             hide_index=True,
@@ -876,13 +888,13 @@ if result[0] is not None:
         col_c1, col_c2 = st.columns(2)
         with col_c1:
             st.markdown("#### Apoios Fechados por Responsável")
-            chart_apoios = pd.DataFrame({'Apoios Fechados': apoios_fechados_list}, index=op_names)
+            chart_apoios = metas_df.set_index('Responsável')[['Número de Apoios Fechados']]
             st.bar_chart(chart_apoios, color="#FF6B00")
         with col_c2:
             st.markdown("#### Contatos Realizados na Semana")
-            chart_contacts = pd.DataFrame({'Contatos Realizados': contacts_week}, index=op_names)
+            chart_contacts = metas_df.set_index('Responsável')[['Contatos Realizados nesta Semana']]
             st.bar_chart(chart_contacts, color="#E6007E")
-        
+            
         st.markdown("### 📊 Volumes do Cardápio Político (Histórico)")
         
         # Plotly horizontal bar chart for the 13 frentes (High-End UX)
@@ -952,7 +964,8 @@ if result[0] is not None:
         # WhatsApp Summary Generator (read-only trigger)
         st.divider()
         st.markdown("### 💬 Gerador de Resumo para WhatsApp")
-        selected_wa_op = st.selectbox("Selecione o Responsável para gerar o balanço semanal:", options=op_names, key="wa_op_selectbox")
+        active_op_names = metas_df['Responsável'].tolist()
+        selected_wa_op = st.selectbox("Selecione o Responsável para gerar o balanço semanal:", options=active_op_names, key="wa_op_selectbox")
         
         if st.button("Gerar Relatório WhatsApp", key="wa_report_btn"):
             today = datetime.date.today()
